@@ -1,0 +1,11 @@
+{
+  "id": "obsidian-blog-deploy",
+  "name": "Blog Deploy",
+  "version": "1.0.0",
+  "minAppVersion": "1.0.0",
+  "description": "One-click deploy Obsidian notes to your Hexo blog. Right-click a note, set tags, and auto-push to GitHub.",
+  "author": "magic486",
+  "authorUrl": "https://github.com/magic486",
+  "fundingUrl": "",
+  "isDesktopOnly": true
+}
