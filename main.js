@@ -262,9 +262,9 @@ var GitOperator = class {
 };
 
 // src/images.ts
-var http = __toESM(require("http"));
 var fs = __toESM(require("fs"));
 var path2 = __toESM(require("path"));
+var import_child_process2 = require("child_process");
 function extractImageRefs(content) {
   const refs = [];
   const seen = /* @__PURE__ */ new Set();
@@ -351,68 +351,29 @@ function resolveImagePath(target, isWikilink, noteDir, vaultRoot) {
 }
 async function uploadToPicGo(imagePath, picgoServer) {
   return new Promise((resolve3, reject) => {
-    const fileData = fs.readFileSync(imagePath);
-    const fileName = path2.basename(imagePath);
-    const ext = path2.extname(fileName).toLowerCase();
-    const mimeTypes = {
-      ".png": "image/png",
-      ".jpg": "image/jpeg",
-      ".jpeg": "image/jpeg",
-      ".gif": "image/gif",
-      ".webp": "image/webp",
-      ".svg": "image/svg+xml",
-      ".bmp": "image/bmp"
-    };
-    const mimeType = mimeTypes[ext] || "image/png";
-    const boundary = `----PicGo${Date.now()}`;
-    const bodyStart = Buffer.from(
-      `--${boundary}\r
-Content-Disposition: form-data; name="files"; filename="${fileName}"\r
-Content-Type: ${mimeType}\r
-\r
-`
-    );
-    const bodyEnd = Buffer.from(`\r
---${boundary}--\r
-`);
-    const requestBody = Buffer.concat([bodyStart, fileData, bodyEnd]);
-    const url = new URL(picgoServer);
-    const options = {
-      hostname: url.hostname,
-      port: url.port || 36677,
-      path: "/upload",
-      method: "POST",
-      timeout: 3e4,
-      headers: {
-        "Content-Type": `multipart/form-data; boundary=${boundary}`,
-        "Content-Length": String(requestBody.length)
-      }
-    };
-    const req = http.request(options, (res) => {
-      let data = "";
-      res.on("data", (chunk) => data += chunk);
-      res.on("end", () => {
-        try {
-          const result = JSON.parse(data);
-          if (result.success && result.result && result.result.length > 0) {
-            resolve3(result.result[0]);
-          } else {
-            reject(new Error(result.message || result.msg || "Upload failed"));
-          }
-        } catch {
-          reject(new Error("Failed to parse PicGo response: " + data.slice(0, 200)));
-        }
+    const absPath = imagePath.replace(/"/g, '\\"');
+    const cmd = `curl.exe -s -X POST "${picgoServer}/upload" -F "files=@${absPath}" --connect-timeout 10 -m 40`;
+    try {
+      const stdout = (0, import_child_process2.execSync)(cmd, {
+        encoding: "utf-8",
+        timeout: 45e3,
+        windowsHide: true,
+        stdio: ["pipe", "pipe", "pipe"]
       });
-    });
-    req.on("timeout", () => {
-      req.destroy();
-      reject(new Error("PicGo upload timed out (30s)"));
-    });
-    req.on("error", (err) => {
-      reject(new Error(`Cannot connect to PicGo at ${url.hostname}:${url.port} \u2014 is PicGo running? (${err.message})`));
-    });
-    req.write(requestBody);
-    req.end();
+      try {
+        const result = JSON.parse(stdout);
+        if (result.success && result.result && result.result.length > 0) {
+          resolve3(result.result[0]);
+        } else {
+          reject(new Error(result.message || result.msg || "Upload failed: empty response"));
+        }
+      } catch {
+        reject(new Error("Failed to parse response: " + stdout.slice(0, 200)));
+      }
+    } catch (e) {
+      const stderr = e.stderr?.toString() || e.stdout?.toString() || e.message || "";
+      reject(new Error(stderr.slice(0, 200)));
+    }
   });
 }
 async function processImages(content, noteAbsPath, vaultRoot, picgoServer) {
