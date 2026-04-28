@@ -21,6 +21,7 @@ export interface DeployItem {
 export class Deployer {
   private blogPath: string;
   private postsSubdir: string;
+  private vaultRoot: string;
   private git: GitOperator | null;
   private topImg: string;
   private comments: boolean;
@@ -31,13 +32,15 @@ export class Deployer {
     postsSubdir: string,
     topImg: string,
     comments: boolean,
-    commitTemplate: string
+    commitTemplate: string,
+    vaultRoot: string
   ) {
     this.blogPath = blogPath;
     this.postsSubdir = postsSubdir;
     this.topImg = topImg;
     this.comments = comments;
     this.commitTemplate = commitTemplate;
+    this.vaultRoot = vaultRoot;
     this.git = null;
   }
 
@@ -55,18 +58,20 @@ export class Deployer {
   }
 
   readFile(filePath: string): string {
-    return fs.readFileSync(filePath, "utf-8");
+    const absPath = path.isAbsolute(filePath) ? filePath : path.join(this.vaultRoot, filePath);
+    return fs.readFileSync(absPath, "utf-8");
   }
 
-  prepareItem(sourcePath: string): DeployItem | null {
-    const content = this.readFile(sourcePath);
-    const fileName = path.basename(sourcePath);
+  prepareItem(relativePath: string): DeployItem | null {
+    const absSourcePath = path.join(this.vaultRoot, relativePath);
+    const content = this.readFile(absSourcePath);
+    const fileName = path.basename(relativePath);
     const destPath = path.join(this.postsPath, fileName);
 
     const { frontmatter } = parseFrontmatter(content);
     const title =
       frontmatter?.title || extractTitleFromContent(content) || path.parse(fileName).name;
-    const autoTags = extractTagsFromPath(sourcePath);
+    const autoTags = extractTagsFromPath(relativePath);
 
     let tags = frontmatter?.tags || "";
     if (autoTags && !tags) {
@@ -76,7 +81,7 @@ export class Deployer {
       tags = [...tagSet].filter(Boolean).join(", ");
     }
 
-    return { sourcePath, destPath, title, tags, fileName };
+    return { sourcePath: absSourcePath, destPath, title, tags, fileName };
   }
 
   deployItem(item: DeployItem): string {

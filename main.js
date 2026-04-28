@@ -256,12 +256,13 @@ var GitOperator = class {
 
 // src/deployer.ts
 var Deployer = class {
-  constructor(blogPath, postsSubdir, topImg, comments, commitTemplate) {
+  constructor(blogPath, postsSubdir, topImg, comments, commitTemplate, vaultRoot) {
     this.blogPath = blogPath;
     this.postsSubdir = postsSubdir;
     this.topImg = topImg;
     this.comments = comments;
     this.commitTemplate = commitTemplate;
+    this.vaultRoot = vaultRoot;
     this.git = null;
   }
   get postsPath() {
@@ -275,15 +276,17 @@ var Deployer = class {
     return this.git;
   }
   readFile(filePath) {
-    return fs.readFileSync(filePath, "utf-8");
+    const absPath = path2.isAbsolute(filePath) ? filePath : path2.join(this.vaultRoot, filePath);
+    return fs.readFileSync(absPath, "utf-8");
   }
-  prepareItem(sourcePath) {
-    const content = this.readFile(sourcePath);
-    const fileName = path2.basename(sourcePath);
+  prepareItem(relativePath) {
+    const absSourcePath = path2.join(this.vaultRoot, relativePath);
+    const content = this.readFile(absSourcePath);
+    const fileName = path2.basename(relativePath);
     const destPath = path2.join(this.postsPath, fileName);
     const { frontmatter } = parseFrontmatter(content);
     const title = frontmatter?.title || extractTitleFromContent(content) || path2.parse(fileName).name;
-    const autoTags = extractTagsFromPath(sourcePath);
+    const autoTags = extractTagsFromPath(relativePath);
     let tags = frontmatter?.tags || "";
     if (autoTags && !tags) {
       tags = autoTags;
@@ -291,7 +294,7 @@ var Deployer = class {
       const tagSet = /* @__PURE__ */ new Set([...tags.split(",").map((t) => t.trim()), ...autoTags.split(",").map((t) => t.trim())]);
       tags = [...tagSet].filter(Boolean).join(", ");
     }
-    return { sourcePath, destPath, title, tags, fileName };
+    return { sourcePath: absSourcePath, destPath, title, tags, fileName };
   }
   deployItem(item) {
     const content = this.readFile(item.sourcePath);
@@ -441,12 +444,14 @@ var Scheduler = class {
     this.clearTimer();
     this.updateStatusBar();
     new import_obsidian2.Notice(`Deploying ${items.length} note(s) to blog...`);
+    const vaultRoot = this.plugin.app.vault.adapter.getBasePath?.() ?? "";
     const deployer = new Deployer(
       this.plugin.settings.blogPath,
       this.plugin.settings.postsSubdir,
       this.plugin.settings.topImg,
       this.plugin.settings.comments,
-      this.plugin.settings.commitTemplate
+      this.plugin.settings.commitTemplate,
+      vaultRoot
     );
     const result = deployer.deployAll(items, this.plugin.settings.autoPush);
     if (result.success) {
@@ -526,14 +531,26 @@ ${names}`, 8e3);
     await this.saveData(this.settings);
   }
   showDeployDialog(file) {
-    const deployer = new Deployer(
-      this.settings.blogPath,
-      this.settings.postsSubdir,
-      this.settings.topImg,
-      this.settings.comments,
-      this.settings.commitTemplate
-    );
-    const item = deployer.prepareItem(file.path);
+    const vaultRoot = this.app.vault.adapter.getBasePath?.() ?? "";
+    if (!vaultRoot) {
+      new import_obsidian3.Notice("\u274C Failed to get vault root path");
+      return;
+    }
+    let item = null;
+    try {
+      const deployer = new Deployer(
+        this.settings.blogPath,
+        this.settings.postsSubdir,
+        this.settings.topImg,
+        this.settings.comments,
+        this.settings.commitTemplate,
+        vaultRoot
+      );
+      item = deployer.prepareItem(file.path);
+    } catch (e) {
+      new import_obsidian3.Notice(`\u274C Error reading file: ${e.message}`);
+      return;
+    }
     if (!item) {
       new import_obsidian3.Notice("\u274C Failed to prepare deploy item");
       return;

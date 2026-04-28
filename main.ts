@@ -100,15 +100,28 @@ export default class BlogDeployPlugin extends Plugin {
   }
 
   private showDeployDialog(file: TFile): void {
-    const deployer = new Deployer(
-      this.settings.blogPath,
-      this.settings.postsSubdir,
-      this.settings.topImg,
-      this.settings.comments,
-      this.settings.commitTemplate
-    );
+    const vaultRoot = (this.app.vault.adapter as any).getBasePath?.() ?? "";
+    if (!vaultRoot) {
+      new Notice("❌ Failed to get vault root path");
+      return;
+    }
 
-    const item = deployer.prepareItem(file.path);
+    let item: DeployItem | null = null;
+    try {
+      const deployer = new Deployer(
+        this.settings.blogPath,
+        this.settings.postsSubdir,
+        this.settings.topImg,
+        this.settings.comments,
+        this.settings.commitTemplate,
+        vaultRoot
+      );
+      item = deployer.prepareItem(file.path);
+    } catch (e: any) {
+      new Notice(`❌ Error reading file: ${e.message}`);
+      return;
+    }
+
     if (!item) {
       new Notice("❌ Failed to prepare deploy item");
       return;

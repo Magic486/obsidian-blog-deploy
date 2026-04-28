@@ -114,12 +114,15 @@ export class Scheduler {
 
     new Notice(`Deploying ${items.length} note(s) to blog...`);
 
+    const vaultRoot = (this.plugin.app.vault.adapter as any).getBasePath?.() ?? "";
+
     const deployer = new Deployer(
       this.plugin.settings.blogPath,
       this.plugin.settings.postsSubdir,
       this.plugin.settings.topImg,
       this.plugin.settings.comments,
-      this.plugin.settings.commitTemplate
+      this.plugin.settings.commitTemplate,
+      vaultRoot
     );
 
     const result = deployer.deployAll(items, this.plugin.settings.autoPush);
