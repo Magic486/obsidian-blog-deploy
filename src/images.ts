@@ -130,7 +130,7 @@ export async function uploadToPicGo(
 
     const boundary = `----PicGo${Date.now()}`;
     const bodyStart = Buffer.from(
-      `--${boundary}\r\nContent-Disposition: form-data; name="list"; filename="${fileName}"\r\nContent-Type: ${mimeType}\r\n\r\n`
+      `--${boundary}\r\nContent-Disposition: form-data; name="files"; filename="${fileName}"\r\nContent-Type: ${mimeType}\r\n\r\n`
     );
     const bodyEnd = Buffer.from(`\r\n--${boundary}--\r\n`);
     const requestBody = Buffer.concat([bodyStart, fileData, bodyEnd]);

@@ -367,7 +367,7 @@ async function uploadToPicGo(imagePath, picgoServer) {
     const boundary = `----PicGo${Date.now()}`;
     const bodyStart = Buffer.from(
       `--${boundary}\r
-Content-Disposition: form-data; name="list"; filename="${fileName}"\r
+Content-Disposition: form-data; name="files"; filename="${fileName}"\r
 Content-Type: ${mimeType}\r
 \r
 `
