@@ -1,5 +1,6 @@
 import * as fs from "fs";
 import * as path from "path";
+import * as os from "os";
 import { execSync } from "child_process";
 
 export interface ImageRef {
@@ -113,10 +114,16 @@ export async function uploadToPicGo(
   picgoServer: string
 ): Promise<string> {
   return new Promise((resolve, reject) => {
-    const absPath = imagePath.replace(/"/g, '\\"');
-    const cmd = `curl.exe -s -X POST "${picgoServer}/upload" -F "files=@${absPath}" --connect-timeout 10 -m 40`;
+    const ext = path.extname(imagePath);
+    const tmpFile = path.join(os.tmpdir(), `picgo_upload_${Date.now()}${ext}`);
+    let tmpCreated = false;
 
     try {
+      fs.copyFileSync(imagePath, tmpFile);
+      tmpCreated = true;
+
+      const cmd = `curl.exe -s -X POST "${picgoServer}/upload" -F "files=@${tmpFile}" --connect-timeout 10 -m 40`;
+
       const stdout = execSync(cmd, {
         encoding: "utf-8",
         timeout: 45000,
@@ -137,6 +144,10 @@ export async function uploadToPicGo(
     } catch (e: any) {
       const stderr = e.stderr?.toString() || e.stdout?.toString() || e.message || "";
       reject(new Error(stderr.slice(0, 200)));
+    } finally {
+      if (tmpCreated) {
+        try { fs.unlinkSync(tmpFile); } catch { /* ignore */ }
+      }
     }
   });
 }

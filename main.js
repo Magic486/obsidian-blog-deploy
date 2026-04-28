@@ -264,6 +264,7 @@ var GitOperator = class {
 // src/images.ts
 var fs = __toESM(require("fs"));
 var path2 = __toESM(require("path"));
+var os = __toESM(require("os"));
 var import_child_process2 = require("child_process");
 function extractImageRefs(content) {
   const refs = [];
@@ -351,9 +352,13 @@ function resolveImagePath(target, isWikilink, noteDir, vaultRoot) {
 }
 async function uploadToPicGo(imagePath, picgoServer) {
   return new Promise((resolve3, reject) => {
-    const absPath = imagePath.replace(/"/g, '\\"');
-    const cmd = `curl.exe -s -X POST "${picgoServer}/upload" -F "files=@${absPath}" --connect-timeout 10 -m 40`;
+    const ext = path2.extname(imagePath);
+    const tmpFile = path2.join(os.tmpdir(), `picgo_upload_${Date.now()}${ext}`);
+    let tmpCreated = false;
     try {
+      fs.copyFileSync(imagePath, tmpFile);
+      tmpCreated = true;
+      const cmd = `curl.exe -s -X POST "${picgoServer}/upload" -F "files=@${tmpFile}" --connect-timeout 10 -m 40`;
       const stdout = (0, import_child_process2.execSync)(cmd, {
         encoding: "utf-8",
         timeout: 45e3,
@@ -373,6 +378,13 @@ async function uploadToPicGo(imagePath, picgoServer) {
     } catch (e) {
       const stderr = e.stderr?.toString() || e.stdout?.toString() || e.message || "";
       reject(new Error(stderr.slice(0, 200)));
+    } finally {
+      if (tmpCreated) {
+        try {
+          fs.unlinkSync(tmpFile);
+        } catch {
+        }
+      }
     }
   });
 }
