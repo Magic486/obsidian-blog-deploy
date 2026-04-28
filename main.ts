@@ -114,7 +114,8 @@ export default class BlogDeployPlugin extends Plugin {
         this.settings.topImg,
         this.settings.comments,
         this.settings.commitTemplate,
-        vaultRoot
+        vaultRoot,
+        this.settings.picgoServer
       );
       item = deployer.prepareItem(file.path);
     } catch (e: any) {
@@ -140,6 +141,7 @@ class DeployConfirmModal extends Modal {
   private onSubmit: (item: DeployItem | null) => void;
   private titleInput: HTMLInputElement;
   private tagsInput: HTMLInputElement;
+  private processImagesCheckbox: HTMLInputElement;
 
   constructor(app: App, item: DeployItem, onSubmit: (item: DeployItem | null) => void) {
     super(app);
@@ -147,6 +149,7 @@ class DeployConfirmModal extends Modal {
     this.onSubmit = onSubmit;
     this.titleInput = document.createElement("input");
     this.tagsInput = document.createElement("input");
+    this.processImagesCheckbox = document.createElement("input");
   }
 
   onOpen(): void {
@@ -180,6 +183,23 @@ class DeployConfirmModal extends Modal {
     this.tagsInput.style.width = "100%";
     this.tagsInput.style.marginBottom = "12px";
 
+    const imageSetting = contentEl.createDiv();
+    imageSetting.style.display = "flex";
+    imageSetting.style.alignItems = "center";
+    imageSetting.style.gap = "8px";
+    imageSetting.style.marginBottom = "12px";
+    this.processImagesCheckbox = imageSetting.createEl("input", {
+      type: "checkbox",
+    });
+    this.processImagesCheckbox.checked = true;
+    this.processImagesCheckbox.id = "blog-deploy-process-images";
+    imageSetting.createEl("label", {
+      text: "🖼️ Upload local images to CDN (PicGo)",
+      cls: "blog-deploy-checkbox-label",
+    });
+    const label = imageSetting.querySelector("label");
+    if (label) label.setAttribute("for", "blog-deploy-process-images");
+
     contentEl.createEl("p", {
       text: `Destination: ${this.item.destPath}`,
       cls: "blog-deploy-path",
@@ -204,6 +224,7 @@ class DeployConfirmModal extends Modal {
     deployBtn.onclick = () => {
       this.item.title = this.titleInput.value.trim() || this.item.title;
       this.item.tags = this.tagsInput.value.trim() || this.item.tags;
+      this.item.processImages = this.processImagesCheckbox.checked;
       this.onSubmit(this.item);
       this.close();
     };

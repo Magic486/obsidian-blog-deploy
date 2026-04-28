@@ -9,6 +9,7 @@ import {
   extractTagsFromPath,
 } from "./frontmatter";
 import { GitOperator } from "./git";
+import { processImages } from "./images";
 
 export interface DeployItem {
   sourcePath: string;
@@ -16,6 +17,16 @@ export interface DeployItem {
   title: string;
   tags: string;
   fileName: string;
+  processImages: boolean;
+}
+
+export interface DeployResult {
+  success: boolean;
+  message: string;
+  count: number;
+  imagesUploaded: number;
+  imagesFailed: number;
+  imageErrors: string[];
 }
 
 export class Deployer {
@@ -26,6 +37,7 @@ export class Deployer {
   private topImg: string;
   private comments: boolean;
   private commitTemplate: string;
+  private picgoServer: string;
 
   constructor(
     blogPath: string,
@@ -33,7 +45,8 @@ export class Deployer {
     topImg: string,
     comments: boolean,
     commitTemplate: string,
-    vaultRoot: string
+    vaultRoot: string,
+    picgoServer: string
   ) {
     this.blogPath = blogPath;
     this.postsSubdir = postsSubdir;
@@ -41,6 +54,7 @@ export class Deployer {
     this.comments = comments;
     this.commitTemplate = commitTemplate;
     this.vaultRoot = vaultRoot;
+    this.picgoServer = picgoServer;
     this.git = null;
   }
 
@@ -81,56 +95,84 @@ export class Deployer {
       tags = [...tagSet].filter(Boolean).join(", ");
     }
 
-    return { sourcePath: absSourcePath, destPath, title, tags, fileName };
+    return { sourcePath: absSourcePath, destPath, title, tags, fileName, processImages: true };
   }
 
-  deployItem(item: DeployItem): string {
+  async deployItem(item: DeployItem): Promise<{
+    dest: string;
+    imagesUploaded: number;
+    imagesFailed: number;
+    imageErrors: string[];
+  }> {
     const content = this.readFile(item.sourcePath);
     const { body } = parseFrontmatter(content);
 
+    let processedBody = body;
+    let imagesUploaded = 0;
+    let imagesFailed = 0;
+    const imageErrors: string[] = [];
+
+    if (item.processImages) {
+      const result = await processImages(body, item.sourcePath, this.vaultRoot, this.picgoServer);
+      processedBody = result.content;
+      imagesUploaded = result.uploaded;
+      imagesFailed = result.failed;
+      imageErrors.push(...result.errors);
+    }
+
     const fm = generateFrontmatter(item.title, item.tags, this.topImg, this.comments);
     const fmStr = generateFrontmatterString(fm);
-    const newContent = fmStr + body;
+    const newContent = fmStr + processedBody;
 
     fs.writeFileSync(item.destPath, newContent, "utf-8");
-    return item.destPath;
+    return { dest: item.destPath, imagesUploaded, imagesFailed, imageErrors };
   }
 
-  deployAll(items: DeployItem[], pushToGit: boolean): {
-    success: boolean;
-    message: string;
-    count: number;
-  } {
+  async deployAll(items: DeployItem[], pushToGit: boolean): Promise<DeployResult> {
     const git = this.initGit();
 
     if (!git.isRepo()) {
-      return { success: false, message: "Blog path is not a git repository", count: 0 };
+      return { success: false, message: "Blog path is not a git repository", count: 0, imagesUploaded: 0, imagesFailed: 0, imageErrors: [] };
     }
 
     if (!fs.existsSync(this.postsPath)) {
-      return { success: false, message: `Posts directory not found: ${this.postsPath}`, count: 0 };
+      return { success: false, message: `Posts directory not found: ${this.postsPath}`, count: 0, imagesUploaded: 0, imagesFailed: 0, imageErrors: [] };
     }
 
     const deployed: string[] = [];
+    let totalUploaded = 0;
+    let totalFailed = 0;
+    const allErrors: string[] = [];
 
     for (const item of items) {
       try {
-        const dest = this.deployItem(item);
+        const { dest, imagesUploaded, imagesFailed, imageErrors } = await this.deployItem(item);
         deployed.push(dest);
+        totalUploaded += imagesUploaded;
+        totalFailed += imagesFailed;
+        allErrors.push(...imageErrors);
       } catch (e: any) {
-        return { success: false, message: `Failed to write ${item.fileName}: ${e.message}`, count: deployed.length };
+        return { success: false, message: `Failed to write ${item.fileName}: ${e.message}`, count: deployed.length, imagesUploaded: totalUploaded, imagesFailed: totalFailed, imageErrors: allErrors };
       }
     }
 
     if (deployed.length === 0) {
-      return { success: false, message: "No files deployed", count: 0 };
+      return { success: false, message: "No files deployed", count: 0, imagesUploaded: 0, imagesFailed: 0, imageErrors: [] };
+    }
+
+    let msg = `Deployed ${deployed.length} note(s)`;
+    if (totalUploaded > 0) {
+      msg += ` | 🖼️ ${totalUploaded} image(s) uploaded`;
+    }
+    if (totalFailed > 0) {
+      msg += ` | ⚠️ ${totalFailed} failed`;
     }
 
     if (pushToGit) {
       const relativePaths = deployed.map((d) => path.relative(this.blogPath, d));
       const added = git.add(relativePaths);
       if (!added) {
-        return { success: false, message: "git add failed", count: deployed.length };
+        return { success: false, message: "git add failed", count: deployed.length, imagesUploaded: totalUploaded, imagesFailed: totalFailed, imageErrors: allErrors };
       }
 
       const title = items.map((i) => i.title).join(", ");
@@ -141,14 +183,17 @@ export class Deployer {
       if (!pushResult.success) {
         return {
           success: false,
-          message: `Files deployed but git push failed: ${pushResult.message}`,
+          message: `${msg} but git push failed: ${pushResult.message}`,
           count: deployed.length,
+          imagesUploaded: totalUploaded,
+          imagesFailed: totalFailed,
+          imageErrors: allErrors,
         };
       }
 
-      return { success: true, message: `Successfully deployed ${deployed.length} note(s) and pushed to GitHub`, count: deployed.length };
+      msg += " and pushed to GitHub";
     }
 
-    return { success: true, message: `Successfully deployed ${deployed.length} note(s) to blog directory`, count: deployed.length };
+    return { success: true, message: msg, count: deployed.length, imagesUploaded: totalUploaded, imagesFailed: totalFailed, imageErrors: allErrors };
   }
 }

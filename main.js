@@ -49,7 +49,8 @@ var DEFAULT_SETTINGS = {
   autoPush: true,
   topImg: "transparent",
   comments: false,
-  commitTemplate: "publish: {{title}} via Obsidian"
+  commitTemplate: "publish: {{title}} via Obsidian",
+  picgoServer: "http://127.0.0.1:36677"
 };
 var BlogDeploySettingTab = class extends import_obsidian.PluginSettingTab {
   constructor(app, plugin) {
@@ -102,12 +103,18 @@ var BlogDeploySettingTab = class extends import_obsidian.PluginSettingTab {
         await this.plugin.saveSettings();
       })
     );
+    new import_obsidian.Setting(containerEl).setName("PicGo server URL").setDesc("Local PicGo upload server address (PicGo \u2192 \u8BBE\u7F6E \u2192 Server)").addText(
+      (text) => text.setPlaceholder("http://127.0.0.1:36677").setValue(this.plugin.settings.picgoServer).onChange(async (value) => {
+        this.plugin.settings.picgoServer = value || "http://127.0.0.1:36677";
+        await this.plugin.saveSettings();
+      })
+    );
   }
 };
 
 // src/deployer.ts
-var path2 = __toESM(require("path"));
-var fs = __toESM(require("fs"));
+var path3 = __toESM(require("path"));
+var fs2 = __toESM(require("fs"));
 
 // src/frontmatter.ts
 function parseFrontmatter(content) {
@@ -254,19 +261,208 @@ var GitOperator = class {
   }
 };
 
+// src/images.ts
+var http = __toESM(require("http"));
+var fs = __toESM(require("fs"));
+var path2 = __toESM(require("path"));
+function extractImageRefs(content) {
+  const refs = [];
+  const seen = /* @__PURE__ */ new Set();
+  const mdRegex = /!\[([^\]]*)\]\(([^)]+)\)/g;
+  let match;
+  while ((match = mdRegex.exec(content)) !== null) {
+    const target = match[2];
+    if (seen.has(target))
+      continue;
+    seen.add(target);
+    refs.push({
+      fullMatch: match[0],
+      alt: match[1],
+      target,
+      isWikilink: false,
+      isRemote: /^https?:\/\//i.test(target)
+    });
+  }
+  const wikiRegex = /!\[\[([^\]]+)\]\]/g;
+  while ((match = wikiRegex.exec(content)) !== null) {
+    const target = match[1];
+    if (seen.has(target))
+      continue;
+    seen.add(target);
+    refs.push({
+      fullMatch: match[0],
+      alt: target.replace(/\.[^.]+$/, ""),
+      target,
+      isWikilink: true,
+      isRemote: false
+    });
+  }
+  return refs;
+}
+function resolveWikilink(target, noteDir, vaultRoot) {
+  const cleanTarget = target.split("|")[0].trim();
+  const searchPaths = [
+    path2.join(noteDir, cleanTarget),
+    path2.join(vaultRoot, cleanTarget),
+    path2.join(vaultRoot, "assets", cleanTarget),
+    path2.join(vaultRoot, "img", cleanTarget)
+  ];
+  const imgDirs = findImageDirs(noteDir);
+  for (const dir of imgDirs) {
+    searchPaths.push(path2.join(dir, cleanTarget));
+  }
+  for (const dir of findImageDirs(vaultRoot)) {
+    searchPaths.push(path2.join(dir, cleanTarget));
+  }
+  for (const p of searchPaths) {
+    if (fs.existsSync(p))
+      return p;
+  }
+  return null;
+}
+function findImageDirs(baseDir) {
+  const dirs = [];
+  try {
+    const entries = fs.readdirSync(baseDir, { withFileTypes: true });
+    for (const entry of entries) {
+      if (entry.isDirectory()) {
+        dirs.push(path2.join(baseDir, entry.name));
+      }
+    }
+  } catch {
+  }
+  return dirs;
+}
+function resolveImagePath(target, isWikilink, noteDir, vaultRoot) {
+  if (path2.isAbsolute(target)) {
+    return fs.existsSync(target) ? target : null;
+  }
+  if (isWikilink) {
+    return resolveWikilink(target, noteDir, vaultRoot);
+  }
+  const decoded = decodeURIComponent(target);
+  const resolved = path2.resolve(noteDir, decoded);
+  if (fs.existsSync(resolved))
+    return resolved;
+  const vaultResolved = path2.resolve(vaultRoot, decoded);
+  if (fs.existsSync(vaultResolved))
+    return vaultResolved;
+  return null;
+}
+async function uploadToPicGo(imagePath, picgoServer) {
+  return new Promise((resolve3, reject) => {
+    const fileData = fs.readFileSync(imagePath);
+    const fileName = path2.basename(imagePath);
+    const ext = path2.extname(fileName).toLowerCase();
+    const mimeTypes = {
+      ".png": "image/png",
+      ".jpg": "image/jpeg",
+      ".jpeg": "image/jpeg",
+      ".gif": "image/gif",
+      ".webp": "image/webp",
+      ".svg": "image/svg+xml",
+      ".bmp": "image/bmp"
+    };
+    const mimeType = mimeTypes[ext] || "image/png";
+    const boundary = `----PicGo${Date.now()}`;
+    const bodyStart = Buffer.from(
+      `--${boundary}\r
+Content-Disposition: form-data; name="list"; filename="${fileName}"\r
+Content-Type: ${mimeType}\r
+\r
+`
+    );
+    const bodyEnd = Buffer.from(`\r
+--${boundary}--\r
+`);
+    const requestBody = Buffer.concat([bodyStart, fileData, bodyEnd]);
+    const url = new URL(picgoServer);
+    const options = {
+      hostname: url.hostname,
+      port: url.port || 36677,
+      path: "/upload",
+      method: "POST",
+      timeout: 3e4,
+      headers: {
+        "Content-Type": `multipart/form-data; boundary=${boundary}`,
+        "Content-Length": String(requestBody.length)
+      }
+    };
+    const req = http.request(options, (res) => {
+      let data = "";
+      res.on("data", (chunk) => data += chunk);
+      res.on("end", () => {
+        try {
+          const result = JSON.parse(data);
+          if (result.success && result.result && result.result.length > 0) {
+            resolve3(result.result[0]);
+          } else {
+            reject(new Error(result.message || result.msg || "Upload failed"));
+          }
+        } catch {
+          reject(new Error("Failed to parse PicGo response: " + data.slice(0, 200)));
+        }
+      });
+    });
+    req.on("timeout", () => {
+      req.destroy();
+      reject(new Error("PicGo upload timed out (30s)"));
+    });
+    req.on("error", (err) => {
+      reject(new Error(`Cannot connect to PicGo at ${url.hostname}:${url.port} \u2014 is PicGo running? (${err.message})`));
+    });
+    req.write(requestBody);
+    req.end();
+  });
+}
+async function processImages(content, noteAbsPath, vaultRoot, picgoServer) {
+  const refs = extractImageRefs(content);
+  const localRefs = refs.filter((r) => !r.isRemote);
+  if (localRefs.length === 0) {
+    return { content, uploaded: 0, failed: 0, errors: [] };
+  }
+  const noteDir = path2.dirname(noteAbsPath);
+  let result = content;
+  let uploaded = 0;
+  let failed = 0;
+  const errors = [];
+  const uploads = [];
+  for (const ref of localRefs) {
+    const absPath = resolveImagePath(ref.target, ref.isWikilink, noteDir, vaultRoot);
+    if (absPath) {
+      uploads.push({ ref, absPath });
+    } else {
+      failed++;
+      errors.push(`Image not found: ${ref.target} in ${path2.basename(noteAbsPath)}`);
+    }
+  }
+  for (const { ref, absPath } of uploads) {
+    try {
+      const cdnUrl = await uploadToPicGo(absPath, picgoServer);
+      result = result.replace(ref.fullMatch, `![${ref.alt}](${cdnUrl})`);
+      uploaded++;
+    } catch (e) {
+      failed++;
+      errors.push(`Upload failed for ${ref.target}: ${e.message}`);
+    }
+  }
+  return { content: result, uploaded, failed, errors };
+}
+
 // src/deployer.ts
 var Deployer = class {
-  constructor(blogPath, postsSubdir, topImg, comments, commitTemplate, vaultRoot) {
+  constructor(blogPath, postsSubdir, topImg, comments, commitTemplate, vaultRoot, picgoServer) {
     this.blogPath = blogPath;
     this.postsSubdir = postsSubdir;
     this.topImg = topImg;
     this.comments = comments;
     this.commitTemplate = commitTemplate;
     this.vaultRoot = vaultRoot;
+    this.picgoServer = picgoServer;
     this.git = null;
   }
   get postsPath() {
-    return path2.join(this.blogPath, this.postsSubdir);
+    return path3.join(this.blogPath, this.postsSubdir);
   }
   initGit() {
     this.git = new GitOperator(this.blogPath);
@@ -276,16 +472,16 @@ var Deployer = class {
     return this.git;
   }
   readFile(filePath) {
-    const absPath = path2.isAbsolute(filePath) ? filePath : path2.join(this.vaultRoot, filePath);
-    return fs.readFileSync(absPath, "utf-8");
+    const absPath = path3.isAbsolute(filePath) ? filePath : path3.join(this.vaultRoot, filePath);
+    return fs2.readFileSync(absPath, "utf-8");
   }
   prepareItem(relativePath) {
-    const absSourcePath = path2.join(this.vaultRoot, relativePath);
+    const absSourcePath = path3.join(this.vaultRoot, relativePath);
     const content = this.readFile(absSourcePath);
-    const fileName = path2.basename(relativePath);
-    const destPath = path2.join(this.postsPath, fileName);
+    const fileName = path3.basename(relativePath);
+    const destPath = path3.join(this.postsPath, fileName);
     const { frontmatter } = parseFrontmatter(content);
-    const title = frontmatter?.title || extractTitleFromContent(content) || path2.parse(fileName).name;
+    const title = frontmatter?.title || extractTitleFromContent(content) || path3.parse(fileName).name;
     const autoTags = extractTagsFromPath(relativePath);
     let tags = frontmatter?.tags || "";
     if (autoTags && !tags) {
@@ -294,42 +490,66 @@ var Deployer = class {
       const tagSet = /* @__PURE__ */ new Set([...tags.split(",").map((t) => t.trim()), ...autoTags.split(",").map((t) => t.trim())]);
       tags = [...tagSet].filter(Boolean).join(", ");
     }
-    return { sourcePath: absSourcePath, destPath, title, tags, fileName };
+    return { sourcePath: absSourcePath, destPath, title, tags, fileName, processImages: true };
   }
-  deployItem(item) {
+  async deployItem(item) {
     const content = this.readFile(item.sourcePath);
     const { body } = parseFrontmatter(content);
+    let processedBody = body;
+    let imagesUploaded = 0;
+    let imagesFailed = 0;
+    const imageErrors = [];
+    if (item.processImages) {
+      const result = await processImages(body, item.sourcePath, this.vaultRoot, this.picgoServer);
+      processedBody = result.content;
+      imagesUploaded = result.uploaded;
+      imagesFailed = result.failed;
+      imageErrors.push(...result.errors);
+    }
     const fm = generateFrontmatter(item.title, item.tags, this.topImg, this.comments);
     const fmStr = generateFrontmatterString(fm);
-    const newContent = fmStr + body;
-    fs.writeFileSync(item.destPath, newContent, "utf-8");
-    return item.destPath;
+    const newContent = fmStr + processedBody;
+    fs2.writeFileSync(item.destPath, newContent, "utf-8");
+    return { dest: item.destPath, imagesUploaded, imagesFailed, imageErrors };
   }
-  deployAll(items, pushToGit) {
+  async deployAll(items, pushToGit) {
     const git = this.initGit();
     if (!git.isRepo()) {
-      return { success: false, message: "Blog path is not a git repository", count: 0 };
+      return { success: false, message: "Blog path is not a git repository", count: 0, imagesUploaded: 0, imagesFailed: 0, imageErrors: [] };
     }
-    if (!fs.existsSync(this.postsPath)) {
-      return { success: false, message: `Posts directory not found: ${this.postsPath}`, count: 0 };
+    if (!fs2.existsSync(this.postsPath)) {
+      return { success: false, message: `Posts directory not found: ${this.postsPath}`, count: 0, imagesUploaded: 0, imagesFailed: 0, imageErrors: [] };
     }
     const deployed = [];
+    let totalUploaded = 0;
+    let totalFailed = 0;
+    const allErrors = [];
     for (const item of items) {
       try {
-        const dest = this.deployItem(item);
+        const { dest, imagesUploaded, imagesFailed, imageErrors } = await this.deployItem(item);
         deployed.push(dest);
+        totalUploaded += imagesUploaded;
+        totalFailed += imagesFailed;
+        allErrors.push(...imageErrors);
       } catch (e) {
-        return { success: false, message: `Failed to write ${item.fileName}: ${e.message}`, count: deployed.length };
+        return { success: false, message: `Failed to write ${item.fileName}: ${e.message}`, count: deployed.length, imagesUploaded: totalUploaded, imagesFailed: totalFailed, imageErrors: allErrors };
       }
     }
     if (deployed.length === 0) {
-      return { success: false, message: "No files deployed", count: 0 };
+      return { success: false, message: "No files deployed", count: 0, imagesUploaded: 0, imagesFailed: 0, imageErrors: [] };
+    }
+    let msg = `Deployed ${deployed.length} note(s)`;
+    if (totalUploaded > 0) {
+      msg += ` | \u{1F5BC}\uFE0F ${totalUploaded} image(s) uploaded`;
+    }
+    if (totalFailed > 0) {
+      msg += ` | \u26A0\uFE0F ${totalFailed} failed`;
     }
     if (pushToGit) {
-      const relativePaths = deployed.map((d) => path2.relative(this.blogPath, d));
+      const relativePaths = deployed.map((d) => path3.relative(this.blogPath, d));
       const added = git.add(relativePaths);
       if (!added) {
-        return { success: false, message: "git add failed", count: deployed.length };
+        return { success: false, message: "git add failed", count: deployed.length, imagesUploaded: totalUploaded, imagesFailed: totalFailed, imageErrors: allErrors };
       }
       const title = items.map((i) => i.title).join(", ");
       const commitMsg = git.getCommitMessageTemplate(this.commitTemplate, title);
@@ -338,13 +558,16 @@ var Deployer = class {
       if (!pushResult.success) {
         return {
           success: false,
-          message: `Files deployed but git push failed: ${pushResult.message}`,
-          count: deployed.length
+          message: `${msg} but git push failed: ${pushResult.message}`,
+          count: deployed.length,
+          imagesUploaded: totalUploaded,
+          imagesFailed: totalFailed,
+          imageErrors: allErrors
         };
       }
-      return { success: true, message: `Successfully deployed ${deployed.length} note(s) and pushed to GitHub`, count: deployed.length };
+      msg += " and pushed to GitHub";
     }
-    return { success: true, message: `Successfully deployed ${deployed.length} note(s) to blog directory`, count: deployed.length };
+    return { success: true, message: msg, count: deployed.length, imagesUploaded: totalUploaded, imagesFailed: totalFailed, imageErrors: allErrors };
   }
 };
 
@@ -451,13 +674,19 @@ var Scheduler = class {
       this.plugin.settings.topImg,
       this.plugin.settings.comments,
       this.plugin.settings.commitTemplate,
-      vaultRoot
+      vaultRoot,
+      this.plugin.settings.picgoServer
     );
-    const result = deployer.deployAll(items, this.plugin.settings.autoPush);
+    const result = await deployer.deployAll(items, this.plugin.settings.autoPush);
     if (result.success) {
       new import_obsidian2.Notice(`\u2705 ${result.message}`);
     } else {
       new import_obsidian2.Notice(`\u274C ${result.message}`);
+    }
+    if (result.imageErrors.length > 0) {
+      const errSummary = result.imageErrors.slice(0, 3).join("; ");
+      const more = result.imageErrors.length > 3 ? ` (+${result.imageErrors.length - 3} more)` : "";
+      new import_obsidian2.Notice(`\u26A0\uFE0F Image issues: ${errSummary}${more}`, 8e3);
     }
   }
 };
@@ -544,7 +773,8 @@ ${names}`, 8e3);
         this.settings.topImg,
         this.settings.comments,
         this.settings.commitTemplate,
-        vaultRoot
+        vaultRoot,
+        this.settings.picgoServer
       );
       item = deployer.prepareItem(file.path);
     } catch (e) {
@@ -569,6 +799,7 @@ var DeployConfirmModal = class extends import_obsidian3.Modal {
     this.onSubmit = onSubmit;
     this.titleInput = document.createElement("input");
     this.tagsInput = document.createElement("input");
+    this.processImagesCheckbox = document.createElement("input");
   }
   onOpen() {
     const { contentEl } = this;
@@ -596,6 +827,23 @@ var DeployConfirmModal = class extends import_obsidian3.Modal {
     });
     this.tagsInput.style.width = "100%";
     this.tagsInput.style.marginBottom = "12px";
+    const imageSetting = contentEl.createDiv();
+    imageSetting.style.display = "flex";
+    imageSetting.style.alignItems = "center";
+    imageSetting.style.gap = "8px";
+    imageSetting.style.marginBottom = "12px";
+    this.processImagesCheckbox = imageSetting.createEl("input", {
+      type: "checkbox"
+    });
+    this.processImagesCheckbox.checked = true;
+    this.processImagesCheckbox.id = "blog-deploy-process-images";
+    imageSetting.createEl("label", {
+      text: "\u{1F5BC}\uFE0F Upload local images to CDN (PicGo)",
+      cls: "blog-deploy-checkbox-label"
+    });
+    const label = imageSetting.querySelector("label");
+    if (label)
+      label.setAttribute("for", "blog-deploy-process-images");
     contentEl.createEl("p", {
       text: `Destination: ${this.item.destPath}`,
       cls: "blog-deploy-path"
@@ -617,6 +865,7 @@ var DeployConfirmModal = class extends import_obsidian3.Modal {
     deployBtn.onclick = () => {
       this.item.title = this.titleInput.value.trim() || this.item.title;
       this.item.tags = this.tagsInput.value.trim() || this.item.tags;
+      this.item.processImages = this.processImagesCheckbox.checked;
       this.onSubmit(this.item);
       this.close();
     };

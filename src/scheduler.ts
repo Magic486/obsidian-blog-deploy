@@ -122,15 +122,22 @@ export class Scheduler {
       this.plugin.settings.topImg,
       this.plugin.settings.comments,
       this.plugin.settings.commitTemplate,
-      vaultRoot
+      vaultRoot,
+      this.plugin.settings.picgoServer
     );
 
-    const result = deployer.deployAll(items, this.plugin.settings.autoPush);
+    const result = await deployer.deployAll(items, this.plugin.settings.autoPush);
 
     if (result.success) {
       new Notice(`✅ ${result.message}`);
     } else {
       new Notice(`❌ ${result.message}`);
+    }
+
+    if (result.imageErrors.length > 0) {
+      const errSummary = result.imageErrors.slice(0, 3).join("; ");
+      const more = result.imageErrors.length > 3 ? ` (+${result.imageErrors.length - 3} more)` : "";
+      new Notice(`⚠️ Image issues: ${errSummary}${more}`, 8000);
     }
   }
 }

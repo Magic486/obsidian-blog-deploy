@@ -9,6 +9,7 @@ export interface BlogDeploySettings {
   topImg: string;
   comments: boolean;
   commitTemplate: string;
+  picgoServer: string;
 }
 
 export const DEFAULT_SETTINGS: BlogDeploySettings = {
@@ -19,6 +20,7 @@ export const DEFAULT_SETTINGS: BlogDeploySettings = {
   topImg: "transparent",
   comments: false,
   commitTemplate: "publish: {{title}} via Obsidian",
+  picgoServer: "http://127.0.0.1:36677",
 };
 
 export class BlogDeploySettingTab extends PluginSettingTab {
@@ -115,6 +117,19 @@ export class BlogDeploySettingTab extends PluginSettingTab {
           .setValue(this.plugin.settings.commitTemplate)
           .onChange(async (value) => {
             this.plugin.settings.commitTemplate = value;
+            await this.plugin.saveSettings();
+          })
+      );
+
+    new Setting(containerEl)
+      .setName("PicGo server URL")
+      .setDesc("Local PicGo upload server address (PicGo → 设置 → Server)")
+      .addText((text) =>
+        text
+          .setPlaceholder("http://127.0.0.1:36677")
+          .setValue(this.plugin.settings.picgoServer)
+          .onChange(async (value) => {
+            this.plugin.settings.picgoServer = value || "http://127.0.0.1:36677";
             await this.plugin.saveSettings();
           })
       );
