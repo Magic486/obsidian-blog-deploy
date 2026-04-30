@@ -3,7 +3,7 @@
   "name": "Blog Deploy",
   "version": "1.0.0",
   "minAppVersion": "1.0.0",
-  "description": "One-click deploy Obsidian notes to your Hexo blog. Right-click a note, set tags, and auto-push to GitHub.",
+  "description": "一键部署 Obsidian 笔记到 Hexo 博客。右键笔记即可自动添加 Frontmatter、上传图片到图床、按标签分类并推送至 GitHub。",
   "author": "magic486",
   "authorUrl": "https://github.com/magic486",
   "fundingUrl": "",

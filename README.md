@@ -1,79 +1,104 @@
-# Blog Deploy - Obsidian Plugin
+# Blog Deploy - Obsidian 博客部署插件
 
-One-click deploy Obsidian notes to your Hexo blog with auto git push.
+右键一键部署 Obsidian 笔记到 Hexo 博客，自动添加 Frontmatter、上传图片、按标签分类并推送至 GitHub。
 
-## Features
+## 功能
 
-- **Right-click to deploy** - Right-click any `.md` note in the file explorer and select "📤 Deploy to blog"
-- **Auto frontmatter** - Automatically generates title, tags, date, and other frontmatter based on your note
-- **Smart tag detection** - Tags are auto-detected from the note's parent folder (e.g., `数据库/基本操作.md` → tags: 数据库)
-- **Delayed deployment** - Notes are queued and deployed after a configurable delay (default 10 minutes), so you can batch multiple notes
-- **Auto git push** - Automatically `git add`, `git commit`, and `git push` to trigger your GitHub Actions deployment
-- **Queue management** - View, cancel, or force-deploy the queue anytime via command palette
+- **右键部署** — 在文件浏览器右键任意 `.md` 笔记，选择「📤 部署到博客」
+- **自动 Frontmatter** — 自动生成标题、标签、日期等文章头部信息
+- **智能标签识别** — 根据笔记所在文件夹自动检测标签（如 `数据库/基本操作.md` → tags: 数据库）
+- **已有标签选择** — 部署弹窗展示博客中已有的标签，点击即可添加/移除
+- **按标签分类** — 自动在 `_posts/` 下按标签创建子文件夹（如 `_posts/C++/`, `_posts/数据库/`）
+- **延迟部署** — 笔记加入队列，等待可配置的延迟后统一部署（默认 10 分钟），方便批量操作
+- **自动上传图片** — 笔记中的本地图片自动通过 PicGo 上传到图床，替换为 CDN 链接
+- **原笔记无修改** — 所有图片路径替换仅在博客副本中生效，vault 中的原笔记完全不受影响
+- **自动 Git 推送** — 自动执行 `git add` → `git commit` → `git push`，触发 GitHub Actions 部署
+- **队列管理** — 状态栏倒计时，可随时「立即推送」或「取消全部」
 
-## Requirements
+## 系统要求
 
 - Obsidian v1.0.0+
-- Node.js installed on your system (for production builds only, not needed to use the plugin)
-- A Hexo/Hugo blog in a local git repository
-- Git configured with push access to your blog's remote
+- PicGo 桌面端（图片上传功能需要）
+- 一个 Hexo/Hugo 博客的本地 Git 仓库
+- Git 已配置 push 权限
 
-## Installation
+## 安装
 
-### Manual Installation (recommended)
+### 手动安装（推荐）
 
-1. Download `main.js` and `manifest.json` from the [latest release](https://github.com/magic486/obsidian-blog-deploy/releases)
-2. Copy both files into your vault's `.obsidian/plugins/obsidian-blog-deploy/` folder
-3. Restart Obsidian or refresh plugins
-4. Go to Settings → Community plugins → Enable "Blog Deploy"
+1. 从 [Releases](https://github.com/Magic486/obsidian-blog-deploy/releases) 下载 `main.js` 和 `manifest.json`
+2. 复制到你的 vault 的 `.obsidian/plugins/obsidian-blog-deploy/` 文件夹
+3. 重启 Obsidian 或刷新插件列表
+4. 进入设置 → 第三方插件 → 启用「Blog Deploy」
 
-### From Source
+### 从源码构建
 
 ```bash
-git clone https://github.com/magic486/obsidian-blog-deploy.git
+git clone https://github.com/Magic486/obsidian-blog-deploy.git
 cd obsidian-blog-deploy
 npm install
 npm run build
-# Copy main.js and manifest.json to your vault's .obsidian/plugins/obsidian-blog-deploy/
+# 将 main.js 和 manifest.json 复制到 vault 的 .obsidian/plugins/obsidian-blog-deploy/
 ```
 
-## Configuration
+## 配置
 
-After enabling the plugin, go to **Settings → Blog Deploy**:
+启用插件后，进入 **设置 → Blog Deploy**：
 
-| Setting | Default | Description |
-|---------|---------|-------------|
-| Blog local path | `C:\Users\yelfs\Desktop\My-Blog` | Absolute path to your blog git repo |
-| Posts subdirectory | `source\_posts` | Relative path to the posts folder |
-| Deploy delay (minutes) | `10` | Wait time before auto-deploy (0 = immediate) |
-| Auto git push | `On` | Automatically commit and push after deploying |
-| Comments enabled | `Off` | Default `comments` value in frontmatter |
-| Top image | `transparent` | Default `top_img` value in frontmatter |
-| Commit message template | `publish: {{title}} via Obsidian` | Git commit message format |
+| 设置项 | 默认值 | 说明 |
+|--------|--------|------|
+| 博客本地路径 | `C:\Users\yelfs\Desktop\My-Blog` | 博客 Git 仓库的绝对路径 |
+| 文章子目录 | `source\_posts` | _posts 文件夹的相对路径 |
+| 部署延迟（分钟） | `10` | 等待多久后自动部署（0 = 立即） |
+| 自动 Git Push | `开启` | 部署后自动提交并推送 |
+| 开启评论 | `关闭` | 文章头部 comments 默认值 |
+| 顶部图片 | `transparent` | 文章头部 top_img 默认值 |
+| 提交信息模板 | `publish: {{title}} via Obsidian` | Git 提交信息格式 |
+| PicGo 服务器地址 | `http://127.0.0.1:36677` | PicGo 本地上传服务器地址 |
 
-## Usage
+## 使用方法
 
-### Deploy a note
+### 部署笔记
 
-1. Right-click any `.md` file in Obsidian's file explorer
-2. Select **📤 Deploy to blog**
-3. Confirm/edit the title and tags in the dialog
-4. Click **✅ Add to queue**
-5. The status bar shows `⏳ N note(s) pending | Deploy in X:XX`
-6. After the delay, the note is automatically copied to your blog, committed, and pushed
+1. 在 Obsidian 文件浏览器中右键任意 `.md` 文件
+2. 选择 **📤 部署到博客**
+3. 在弹出的对话框中确认/修改标题和标签
+   - 点击下方「已有标签」中的标签芯片可快速添加/移除
+   - 也可直接在输入框中手动输入新标签
+4. 勾选/取消「🖼️ 上传本地图片到图床」
+5. 点击 **✅ 加入队列**
+6. 状态栏显示 `⏳ N 篇待部署 | 剩余 X:XX [立即推送] [取消全部]`
+7. 倒计时结束后自动完成部署，或点击「立即推送」/「取消全部」
 
-### Commands (Ctrl/Cmd+P)
+### 命令面板（Ctrl/Cmd+P）
 
-- **Deploy current note to blog** - Deploy the currently open note
-- **Force deploy all pending notes now** - Deploy immediately without waiting
-- **Clear deploy queue** - Cancel all pending deployments
-- **Show deploy queue** - List all pending notes
+| 命令 | 说明 |
+|------|------|
+| 部署当前笔记到博客 | 部署当前打开的笔记 |
+| 立即部署队列中的所有笔记 | 跳过倒计时直接部署 |
+| 清空部署队列 | 取消所有待部署笔记 |
+| 查看部署队列 | 列出所有待部署笔记 |
 
-### Frontmatter Generated
+### 图片上传流程
+
+```
+笔记本地图片（![img](assets/1.png)）
+          ↓ 部署时触发
+    PicGo 上传到 Gitee 图床
+          ↓
+    替换为图床链接（![img](https://gitee.com/.../1.png)）
+          ↓
+    写入 blog/source/_posts/标签子目录/
+    ✅ 原 vault 笔记完全不修改
+```
+
+> 前提：PicGo 已开启 Server（默认 `127.0.0.1:36677`），并将 Gitee 设为默认图床。
+
+### 生成的 Frontmatter 格式
 
 ```yaml
 ---
-title: Your Note Title
+title: 你的笔记标题
 tags: 数据库
 date: 2026-04-28
 top_img: transparent
@@ -81,20 +106,19 @@ comments: false
 ---
 ```
 
-- **title**: First `# heading` in the note, or the filename
-- **tags**: Auto-detected from the note's parent folder(s)
-- **date**: Today's date
+- **title**：取笔记第一个 `# 标题`，否则取文件名
+- **tags**：自动检测笔记所在文件夹名，可在部署弹窗中修改
+- **date**：当天日期
 
-## How It Works
+### 博客防盗链（Gitee）
 
-1. Right-click adds the note to a **deploy queue**
-2. The queue countdown starts (configurable delay, default 10 min)
-3. Each new note added resets the countdown
-4. When the timer expires:
-   - Frontmatter is added to each note
-   - Notes are copied to `blog/source/_posts/`
-   - `git add` → `git commit` → `git push` is executed
-   - Your GitHub Actions workflow handles the rest (Hexo build + deploy)
+如果使用 Gitee 图床，需要在博客 HTML 中添加以下 meta 标签防止防盗链：
+
+```html
+<meta name="referrer" content="no-referrer">
+```
+
+Hexo Butterfly 主题可在 `_config.butterfly.yml` 的 `inject.head` 中添加。
 
 ## License
 

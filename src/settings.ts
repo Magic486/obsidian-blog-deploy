@@ -34,11 +34,11 @@ export class BlogDeploySettingTab extends PluginSettingTab {
   display(): void {
     const { containerEl } = this;
     containerEl.empty();
-    containerEl.createEl("h2", { text: "Blog Deploy Settings" });
+    containerEl.createEl("h2", { text: "博客部署设置" });
 
     new Setting(containerEl)
-      .setName("Blog local path")
-      .setDesc("Absolute path to your Hexo/Hugo blog directory (git repo root)")
+      .setName("博客本地路径")
+      .setDesc("Hexo/Hugo 博客 Git 仓库的绝对路径")
       .addText((text) =>
         text
           .setPlaceholder("C:\\Users\\yelfs\\Desktop\\My-Blog")
@@ -50,8 +50,8 @@ export class BlogDeploySettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName("Posts subdirectory")
-      .setDesc("Relative path from blog root to the _posts folder")
+      .setName("文章子目录")
+      .setDesc("博客根目录下的 _posts 文件夹相对路径")
       .addText((text) =>
         text
           .setPlaceholder("source/_posts")
@@ -63,8 +63,8 @@ export class BlogDeploySettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName("Deploy delay (minutes)")
-      .setDesc("How many minutes to wait before auto-deploy (0 = immediate)")
+      .setName("部署延迟（分钟）")
+      .setDesc("等待多久后自动部署（0 = 立即部署）")
       .addSlider((slider) =>
         slider
           .setLimits(0, 60, 1)
@@ -77,8 +77,8 @@ export class BlogDeploySettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName("Auto git push")
-      .setDesc("Automatically commit and push to GitHub after deploying")
+      .setName("自动 Git Push")
+      .setDesc("部署后自动提交并推送到 GitHub")
       .addToggle((toggle) =>
         toggle.setValue(this.plugin.settings.autoPush).onChange(async (value) => {
           this.plugin.settings.autoPush = value;
@@ -87,8 +87,8 @@ export class BlogDeploySettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName("Comments enabled")
-      .setDesc("Default value for 'comments' in frontmatter")
+      .setName("开启评论")
+      .setDesc("文章头部的 comments 默认值")
       .addToggle((toggle) =>
         toggle.setValue(this.plugin.settings.comments).onChange(async (value) => {
           this.plugin.settings.comments = value;
@@ -97,8 +97,8 @@ export class BlogDeploySettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName("Top image")
-      .setDesc("Default value for 'top_img' in frontmatter (e.g., 'transparent' or a URL)")
+      .setName("顶部图片")
+      .setDesc("文章头部的 top_img 默认值（例如 transparent 或图片 URL）")
       .addText((text) =>
         text
           .setValue(this.plugin.settings.topImg)
@@ -109,8 +109,8 @@ export class BlogDeploySettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName("Commit message template")
-      .setDesc("Use {{title}} as placeholder for the post title")
+      .setName("提交信息模板")
+      .setDesc("使用 {{title}} 作为文章标题的占位符")
       .addText((text) =>
         text
           .setPlaceholder("publish: {{title}} via Obsidian")
@@ -122,8 +122,8 @@ export class BlogDeploySettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName("PicGo server URL")
-      .setDesc("Local PicGo upload server address (PicGo → 设置 → Server)")
+      .setName("PicGo 服务器地址")
+      .setDesc("PicGo 本地上传服务器地址（PicGo → 设置 → Server）")
       .addText((text) =>
         text
           .setPlaceholder("http://127.0.0.1:36677")

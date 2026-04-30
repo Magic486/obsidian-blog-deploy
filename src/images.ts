@@ -136,10 +136,10 @@ export async function uploadToPicGo(
         if (result.success && result.result && result.result.length > 0) {
           resolve(result.result[0]);
         } else {
-          reject(new Error(result.message || result.msg || "Upload failed: empty response"));
+          reject(new Error(result.message || result.msg || "上传失败：空响应"));
         }
       } catch {
-        reject(new Error("Failed to parse response: " + stdout.slice(0, 200)));
+        reject(new Error("解析 PicGo 响应失败：" + stdout.slice(0, 200)));
       }
     } catch (e: any) {
       const stderr = e.stderr?.toString() || e.stdout?.toString() || e.message || "";
@@ -179,7 +179,7 @@ export async function processImages(
       uploads.push({ ref, absPath });
     } else {
       failed++;
-      errors.push(`Image not found: ${ref.target} in ${path.basename(noteAbsPath)}`);
+      errors.push(`找不到图片：${ref.target}（在 ${path.basename(noteAbsPath)} 中）`);
     }
   }
 
@@ -190,7 +190,7 @@ export async function processImages(
       uploaded++;
     } catch (e: any) {
       failed++;
-      errors.push(`Upload failed for ${ref.target}: ${e.message}`);
+      errors.push(`上传失败 ${ref.target}：${e.message}`);
     }
   }
 

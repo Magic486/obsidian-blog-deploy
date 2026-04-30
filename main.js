@@ -60,50 +60,50 @@ var BlogDeploySettingTab = class extends import_obsidian.PluginSettingTab {
   display() {
     const { containerEl } = this;
     containerEl.empty();
-    containerEl.createEl("h2", { text: "Blog Deploy Settings" });
-    new import_obsidian.Setting(containerEl).setName("Blog local path").setDesc("Absolute path to your Hexo/Hugo blog directory (git repo root)").addText(
+    containerEl.createEl("h2", { text: "\u535A\u5BA2\u90E8\u7F72\u8BBE\u7F6E" });
+    new import_obsidian.Setting(containerEl).setName("\u535A\u5BA2\u672C\u5730\u8DEF\u5F84").setDesc("Hexo/Hugo \u535A\u5BA2 Git \u4ED3\u5E93\u7684\u7EDD\u5BF9\u8DEF\u5F84").addText(
       (text) => text.setPlaceholder("C:\\Users\\yelfs\\Desktop\\My-Blog").setValue(this.plugin.settings.blogPath).onChange(async (value) => {
         this.plugin.settings.blogPath = value;
         await this.plugin.saveSettings();
       })
     );
-    new import_obsidian.Setting(containerEl).setName("Posts subdirectory").setDesc("Relative path from blog root to the _posts folder").addText(
+    new import_obsidian.Setting(containerEl).setName("\u6587\u7AE0\u5B50\u76EE\u5F55").setDesc("\u535A\u5BA2\u6839\u76EE\u5F55\u4E0B\u7684 _posts \u6587\u4EF6\u5939\u76F8\u5BF9\u8DEF\u5F84").addText(
       (text) => text.setPlaceholder("source/_posts").setValue(this.plugin.settings.postsSubdir).onChange(async (value) => {
         this.plugin.settings.postsSubdir = value;
         await this.plugin.saveSettings();
       })
     );
-    new import_obsidian.Setting(containerEl).setName("Deploy delay (minutes)").setDesc("How many minutes to wait before auto-deploy (0 = immediate)").addSlider(
+    new import_obsidian.Setting(containerEl).setName("\u90E8\u7F72\u5EF6\u8FDF\uFF08\u5206\u949F\uFF09").setDesc("\u7B49\u5F85\u591A\u4E45\u540E\u81EA\u52A8\u90E8\u7F72\uFF080 = \u7ACB\u5373\u90E8\u7F72\uFF09").addSlider(
       (slider) => slider.setLimits(0, 60, 1).setValue(this.plugin.settings.deployDelayMinutes).setDynamicTooltip().onChange(async (value) => {
         this.plugin.settings.deployDelayMinutes = value;
         await this.plugin.saveSettings();
       })
     );
-    new import_obsidian.Setting(containerEl).setName("Auto git push").setDesc("Automatically commit and push to GitHub after deploying").addToggle(
+    new import_obsidian.Setting(containerEl).setName("\u81EA\u52A8 Git Push").setDesc("\u90E8\u7F72\u540E\u81EA\u52A8\u63D0\u4EA4\u5E76\u63A8\u9001\u5230 GitHub").addToggle(
       (toggle) => toggle.setValue(this.plugin.settings.autoPush).onChange(async (value) => {
         this.plugin.settings.autoPush = value;
         await this.plugin.saveSettings();
       })
     );
-    new import_obsidian.Setting(containerEl).setName("Comments enabled").setDesc("Default value for 'comments' in frontmatter").addToggle(
+    new import_obsidian.Setting(containerEl).setName("\u5F00\u542F\u8BC4\u8BBA").setDesc("\u6587\u7AE0\u5934\u90E8\u7684 comments \u9ED8\u8BA4\u503C").addToggle(
       (toggle) => toggle.setValue(this.plugin.settings.comments).onChange(async (value) => {
         this.plugin.settings.comments = value;
         await this.plugin.saveSettings();
       })
     );
-    new import_obsidian.Setting(containerEl).setName("Top image").setDesc("Default value for 'top_img' in frontmatter (e.g., 'transparent' or a URL)").addText(
+    new import_obsidian.Setting(containerEl).setName("\u9876\u90E8\u56FE\u7247").setDesc("\u6587\u7AE0\u5934\u90E8\u7684 top_img \u9ED8\u8BA4\u503C\uFF08\u4F8B\u5982 transparent \u6216\u56FE\u7247 URL\uFF09").addText(
       (text) => text.setValue(this.plugin.settings.topImg).onChange(async (value) => {
         this.plugin.settings.topImg = value || "transparent";
         await this.plugin.saveSettings();
       })
     );
-    new import_obsidian.Setting(containerEl).setName("Commit message template").setDesc("Use {{title}} as placeholder for the post title").addText(
+    new import_obsidian.Setting(containerEl).setName("\u63D0\u4EA4\u4FE1\u606F\u6A21\u677F").setDesc("\u4F7F\u7528 {{title}} \u4F5C\u4E3A\u6587\u7AE0\u6807\u9898\u7684\u5360\u4F4D\u7B26").addText(
       (text) => text.setPlaceholder("publish: {{title}} via Obsidian").setValue(this.plugin.settings.commitTemplate).onChange(async (value) => {
         this.plugin.settings.commitTemplate = value;
         await this.plugin.saveSettings();
       })
     );
-    new import_obsidian.Setting(containerEl).setName("PicGo server URL").setDesc("Local PicGo upload server address (PicGo \u2192 \u8BBE\u7F6E \u2192 Server)").addText(
+    new import_obsidian.Setting(containerEl).setName("PicGo \u670D\u52A1\u5668\u5730\u5740").setDesc("PicGo \u672C\u5730\u4E0A\u4F20\u670D\u52A1\u5668\u5730\u5740\uFF08PicGo \u2192 \u8BBE\u7F6E \u2192 Server\uFF09").addText(
       (text) => text.setPlaceholder("http://127.0.0.1:36677").setValue(this.plugin.settings.picgoServer).onChange(async (value) => {
         this.plugin.settings.picgoServer = value || "http://127.0.0.1:36677";
         await this.plugin.saveSettings();
@@ -370,10 +370,10 @@ async function uploadToPicGo(imagePath, picgoServer) {
         if (result.success && result.result && result.result.length > 0) {
           resolve3(result.result[0]);
         } else {
-          reject(new Error(result.message || result.msg || "Upload failed: empty response"));
+          reject(new Error(result.message || result.msg || "\u4E0A\u4F20\u5931\u8D25\uFF1A\u7A7A\u54CD\u5E94"));
         }
       } catch {
-        reject(new Error("Failed to parse response: " + stdout.slice(0, 200)));
+        reject(new Error("\u89E3\u6790 PicGo \u54CD\u5E94\u5931\u8D25\uFF1A" + stdout.slice(0, 200)));
       }
     } catch (e) {
       const stderr = e.stderr?.toString() || e.stdout?.toString() || e.message || "";
@@ -406,7 +406,7 @@ async function processImages(content, noteAbsPath, vaultRoot, picgoServer) {
       uploads.push({ ref, absPath });
     } else {
       failed++;
-      errors.push(`Image not found: ${ref.target} in ${path2.basename(noteAbsPath)}`);
+      errors.push(`\u627E\u4E0D\u5230\u56FE\u7247\uFF1A${ref.target}\uFF08\u5728 ${path2.basename(noteAbsPath)} \u4E2D\uFF09`);
     }
   }
   for (const { ref, absPath } of uploads) {
@@ -416,13 +416,34 @@ async function processImages(content, noteAbsPath, vaultRoot, picgoServer) {
       uploaded++;
     } catch (e) {
       failed++;
-      errors.push(`Upload failed for ${ref.target}: ${e.message}`);
+      errors.push(`\u4E0A\u4F20\u5931\u8D25 ${ref.target}\uFF1A${e.message}`);
     }
   }
   return { content: result, uploaded, failed, errors };
 }
 
 // src/deployer.ts
+function sanitizeFolderName(name) {
+  return name.replace(/[\\/:*?"<>|]/g, "_").trim();
+}
+function computeSubfolder(tags) {
+  const firstTag = tags.split(",")[0]?.trim();
+  if (!firstTag)
+    return "\u672A\u5206\u7C7B";
+  const sanitized = sanitizeFolderName(firstTag);
+  return sanitized || "\u672A\u5206\u7C7B";
+}
+function collectTagsFromFile(filePath) {
+  try {
+    const content = fs2.readFileSync(filePath, "utf-8");
+    const { frontmatter } = parseFrontmatter(content);
+    if (frontmatter?.tags) {
+      return frontmatter.tags.toString().split(",").map((t) => t.trim()).filter(Boolean);
+    }
+  } catch {
+  }
+  return [];
+}
 var Deployer = class {
   constructor(blogPath, postsSubdir, topImg, comments, commitTemplate, vaultRoot, picgoServer) {
     this.blogPath = blogPath;
@@ -436,6 +457,28 @@ var Deployer = class {
   }
   get postsPath() {
     return path3.join(this.blogPath, this.postsSubdir);
+  }
+  getExistingTags() {
+    const tagSet = /* @__PURE__ */ new Set();
+    try {
+      const walkDir = (dir) => {
+        const entries = fs2.readdirSync(dir, { withFileTypes: true });
+        for (const entry of entries) {
+          const fullPath = path3.join(dir, entry.name);
+          if (entry.isDirectory()) {
+            walkDir(fullPath);
+          } else if (entry.isFile() && entry.name.endsWith(".md")) {
+            const tags = collectTagsFromFile(fullPath);
+            for (const t of tags) {
+              tagSet.add(t);
+            }
+          }
+        }
+      };
+      walkDir(this.postsPath);
+    } catch {
+    }
+    return [...tagSet].sort();
   }
   initGit() {
     this.git = new GitOperator(this.blogPath);
@@ -452,7 +495,6 @@ var Deployer = class {
     const absSourcePath = path3.join(this.vaultRoot, relativePath);
     const content = this.readFile(absSourcePath);
     const fileName = path3.basename(relativePath);
-    const destPath = path3.join(this.postsPath, fileName);
     const { frontmatter } = parseFrontmatter(content);
     const title = frontmatter?.title || extractTitleFromContent(content) || path3.parse(fileName).name;
     const autoTags = extractTagsFromPath(relativePath);
@@ -463,6 +505,8 @@ var Deployer = class {
       const tagSet = /* @__PURE__ */ new Set([...tags.split(",").map((t) => t.trim()), ...autoTags.split(",").map((t) => t.trim())]);
       tags = [...tagSet].filter(Boolean).join(", ");
     }
+    const subfolder = computeSubfolder(tags);
+    const destPath = path3.join(this.postsPath, subfolder, fileName);
     return { sourcePath: absSourcePath, destPath, title, tags, fileName, processImages: true };
   }
   async deployItem(item) {
@@ -482,16 +526,20 @@ var Deployer = class {
     const fm = generateFrontmatter(item.title, item.tags, this.topImg, this.comments);
     const fmStr = generateFrontmatterString(fm);
     const newContent = fmStr + processedBody;
+    const destDir = path3.dirname(item.destPath);
+    if (!fs2.existsSync(destDir)) {
+      fs2.mkdirSync(destDir, { recursive: true });
+    }
     fs2.writeFileSync(item.destPath, newContent, "utf-8");
     return { dest: item.destPath, imagesUploaded, imagesFailed, imageErrors };
   }
   async deployAll(items, pushToGit) {
     const git = this.initGit();
     if (!git.isRepo()) {
-      return { success: false, message: "Blog path is not a git repository", count: 0, imagesUploaded: 0, imagesFailed: 0, imageErrors: [] };
+      return { success: false, message: "\u535A\u5BA2\u8DEF\u5F84\u4E0D\u662F\u4E00\u4E2A Git \u4ED3\u5E93", count: 0, imagesUploaded: 0, imagesFailed: 0, imageErrors: [] };
     }
     if (!fs2.existsSync(this.postsPath)) {
-      return { success: false, message: `Posts directory not found: ${this.postsPath}`, count: 0, imagesUploaded: 0, imagesFailed: 0, imageErrors: [] };
+      return { success: false, message: `\u6587\u7AE0\u76EE\u5F55\u4E0D\u5B58\u5728\uFF1A${this.postsPath}`, count: 0, imagesUploaded: 0, imagesFailed: 0, imageErrors: [] };
     }
     const deployed = [];
     let totalUploaded = 0;
@@ -505,24 +553,24 @@ var Deployer = class {
         totalFailed += imagesFailed;
         allErrors.push(...imageErrors);
       } catch (e) {
-        return { success: false, message: `Failed to write ${item.fileName}: ${e.message}`, count: deployed.length, imagesUploaded: totalUploaded, imagesFailed: totalFailed, imageErrors: allErrors };
+        return { success: false, message: `\u5199\u5165 ${item.fileName} \u5931\u8D25\uFF1A${e.message}`, count: deployed.length, imagesUploaded: totalUploaded, imagesFailed: totalFailed, imageErrors: allErrors };
       }
     }
     if (deployed.length === 0) {
-      return { success: false, message: "No files deployed", count: 0, imagesUploaded: 0, imagesFailed: 0, imageErrors: [] };
+      return { success: false, message: "\u6CA1\u6709\u6587\u4EF6\u88AB\u90E8\u7F72", count: 0, imagesUploaded: 0, imagesFailed: 0, imageErrors: [] };
     }
-    let msg = `Deployed ${deployed.length} note(s)`;
+    let msg = `\u6210\u529F\u90E8\u7F72 ${deployed.length} \u7BC7\u7B14\u8BB0`;
     if (totalUploaded > 0) {
-      msg += ` | \u{1F5BC}\uFE0F ${totalUploaded} image(s) uploaded`;
+      msg += ` | \u{1F5BC}\uFE0F ${totalUploaded} \u5F20\u56FE\u7247\u5DF2\u4E0A\u4F20`;
     }
     if (totalFailed > 0) {
-      msg += ` | \u26A0\uFE0F ${totalFailed} failed`;
+      msg += ` | \u26A0\uFE0F ${totalFailed} \u5F20\u5931\u8D25`;
     }
     if (pushToGit) {
       const relativePaths = deployed.map((d) => path3.relative(this.blogPath, d));
       const added = git.add(relativePaths);
       if (!added) {
-        return { success: false, message: "git add failed", count: deployed.length, imagesUploaded: totalUploaded, imagesFailed: totalFailed, imageErrors: allErrors };
+        return { success: false, message: "git add \u5931\u8D25", count: deployed.length, imagesUploaded: totalUploaded, imagesFailed: totalFailed, imageErrors: allErrors };
       }
       const title = items.map((i) => i.title).join(", ");
       const commitMsg = git.getCommitMessageTemplate(this.commitTemplate, title);
@@ -531,14 +579,14 @@ var Deployer = class {
       if (!pushResult.success) {
         return {
           success: false,
-          message: `${msg} but git push failed: ${pushResult.message}`,
+          message: `${msg}\uFF0C\u4F46 git push \u5931\u8D25\uFF1A${pushResult.message}`,
           count: deployed.length,
           imagesUploaded: totalUploaded,
           imagesFailed: totalFailed,
           imageErrors: allErrors
         };
       }
-      msg += " and pushed to GitHub";
+      msg += "\uFF0C\u5DF2\u63A8\u9001\u81F3 GitHub";
     }
     return { success: true, message: msg, count: deployed.length, imagesUploaded: totalUploaded, imagesFailed: totalFailed, imageErrors: allErrors };
   }
@@ -558,11 +606,11 @@ var Scheduler = class {
   add(item) {
     const exists = this.queue.some((q) => q.sourcePath === item.sourcePath);
     if (exists) {
-      new import_obsidian2.Notice(`"${item.title}" is already in the deploy queue`);
+      new import_obsidian2.Notice(`"${item.title}" \u5DF2\u5728\u90E8\u7F72\u961F\u5217\u4E2D`);
       return;
     }
     this.queue.push(item);
-    new import_obsidian2.Notice(`"${item.title}" added to deploy queue (${this.queue.length} pending)`);
+    new import_obsidian2.Notice(`"${item.title}" \u5DF2\u52A0\u5165\u961F\u5217\uFF08\u5171 ${this.queue.length} \u7BC7\u5F85\u5904\u7406\uFF09`);
     this.resetTimer();
   }
   remove(sourcePath) {
@@ -601,7 +649,7 @@ var Scheduler = class {
     this.queue = [];
     this.clearTimer();
     this.updateStatusBar();
-    new import_obsidian2.Notice("Deploy queue cleared");
+    new import_obsidian2.Notice("\u90E8\u7F72\u961F\u5217\u5DF2\u6E05\u7A7A");
   }
   clearTimer() {
     this.clearCountdown();
@@ -620,15 +668,39 @@ var Scheduler = class {
     if (!this.statusBarItem) {
       this.statusBarItem = this.plugin.addStatusBarItem();
       this.statusBarItem.addClass("blog-deploy-status");
+      this.statusBarItem.style.cursor = "default";
     }
     if (this.queue.length === 0) {
       this.statusBarItem.setText("");
       this.statusBarItem.style.display = "none";
     } else {
+      this.statusBarItem.empty();
       const mins = Math.floor(this.remainingSeconds / 60);
       const secs = this.remainingSeconds % 60;
       const timeStr = `${mins}:${String(secs).padStart(2, "0")}`;
-      this.statusBarItem.setText(`\u23F3 ${this.queue.length} note(s) pending | Deploy in ${timeStr}`);
+      const label = this.statusBarItem.createSpan({
+        text: `\u23F3 ${this.queue.length} \u7BC7\u5F85\u90E8\u7F72 | \u5269\u4F59 ${timeStr}`
+      });
+      const forceBtn = this.statusBarItem.createEl("a", {
+        text: "\u7ACB\u5373\u63A8\u9001",
+        cls: "blog-deploy-status-btn"
+      });
+      forceBtn.style.cssText = "margin-left:8px;cursor:pointer;color:var(--text-accent);";
+      forceBtn.onclick = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        this.forceDeploy();
+      };
+      const cancelBtn = this.statusBarItem.createEl("a", {
+        text: "\u53D6\u6D88\u5168\u90E8",
+        cls: "blog-deploy-status-btn"
+      });
+      cancelBtn.style.cssText = "margin-left:4px;cursor:pointer;color:var(--text-error);";
+      cancelBtn.onclick = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        this.clearQueue();
+      };
       this.statusBarItem.style.display = "";
     }
   }
@@ -639,7 +711,7 @@ var Scheduler = class {
     this.queue = [];
     this.clearTimer();
     this.updateStatusBar();
-    new import_obsidian2.Notice(`Deploying ${items.length} note(s) to blog...`);
+    new import_obsidian2.Notice(`\u6B63\u5728\u90E8\u7F72 ${items.length} \u7BC7\u7B14\u8BB0\u5230\u535A\u5BA2...`);
     const vaultRoot = this.plugin.app.vault.adapter.getBasePath?.() ?? "";
     const deployer = new Deployer(
       this.plugin.settings.blogPath,
@@ -658,8 +730,8 @@ var Scheduler = class {
     }
     if (result.imageErrors.length > 0) {
       const errSummary = result.imageErrors.slice(0, 3).join("; ");
-      const more = result.imageErrors.length > 3 ? ` (+${result.imageErrors.length - 3} more)` : "";
-      new import_obsidian2.Notice(`\u26A0\uFE0F Image issues: ${errSummary}${more}`, 8e3);
+      const more = result.imageErrors.length > 3 ? `\uFF08\u8FD8\u6709 ${result.imageErrors.length - 3} \u4E2A\u9519\u8BEF\uFF09` : "";
+      new import_obsidian2.Notice(`\u26A0\uFE0F \u56FE\u7247\u95EE\u9898\uFF1A${errSummary}${more}`, 8e3);
     }
   }
 };
@@ -674,7 +746,7 @@ var BlogDeployPlugin = class extends import_obsidian3.Plugin {
       this.app.workspace.on("file-menu", (menu, file) => {
         if (file instanceof import_obsidian3.TFile && file.extension === "md") {
           menu.addItem((item) => {
-            item.setTitle("\u{1F4E4} Deploy to blog").setIcon("send").onClick(() => {
+            item.setTitle("\u{1F4E4} \u90E8\u7F72\u5230\u535A\u5BA2").setIcon("send").onClick(() => {
               this.showDeployDialog(file);
             });
           });
@@ -683,7 +755,7 @@ var BlogDeployPlugin = class extends import_obsidian3.Plugin {
     );
     this.addCommand({
       id: "deploy-to-blog",
-      name: "Deploy current note to blog",
+      name: "\u90E8\u7F72\u5F53\u524D\u7B14\u8BB0\u5230\u535A\u5BA2",
       checkCallback: (checking) => {
         const file = this.app.workspace.getActiveFile();
         if (file && file.extension === "md") {
@@ -697,28 +769,28 @@ var BlogDeployPlugin = class extends import_obsidian3.Plugin {
     });
     this.addCommand({
       id: "deploy-now",
-      name: "Force deploy all pending notes now",
+      name: "\u7ACB\u5373\u90E8\u7F72\u961F\u5217\u4E2D\u7684\u6240\u6709\u7B14\u8BB0",
       callback: () => {
         this.scheduler.forceDeploy();
       }
     });
     this.addCommand({
       id: "clear-queue",
-      name: "Clear deploy queue",
+      name: "\u6E05\u7A7A\u90E8\u7F72\u961F\u5217",
       callback: () => {
         this.scheduler.clearQueue();
       }
     });
     this.addCommand({
       id: "show-queue",
-      name: "Show deploy queue",
+      name: "\u67E5\u770B\u90E8\u7F72\u961F\u5217",
       callback: () => {
         const queue = this.scheduler.getQueue();
         if (queue.length === 0) {
-          new import_obsidian3.Notice("Deploy queue is empty");
+          new import_obsidian3.Notice("\u90E8\u7F72\u961F\u5217\u4E3A\u7A7A");
         } else {
           const names = queue.map((q) => `- ${q.title}`).join("\n");
-          new import_obsidian3.Notice(`Deploy queue (${queue.length}):
+          new import_obsidian3.Notice(`\u90E8\u7F72\u961F\u5217\uFF08${queue.length} \u7BC7\uFF09\uFF1A
 ${names}`, 8e3);
         }
       }
@@ -735,10 +807,11 @@ ${names}`, 8e3);
   showDeployDialog(file) {
     const vaultRoot = this.app.vault.adapter.getBasePath?.() ?? "";
     if (!vaultRoot) {
-      new import_obsidian3.Notice("\u274C Failed to get vault root path");
+      new import_obsidian3.Notice("\u274C \u83B7\u53D6 vault \u6839\u8DEF\u5F84\u5931\u8D25");
       return;
     }
     let item = null;
+    let existingTags = [];
     try {
       const deployer = new Deployer(
         this.settings.blogPath,
@@ -750,15 +823,16 @@ ${names}`, 8e3);
         this.settings.picgoServer
       );
       item = deployer.prepareItem(file.path);
+      existingTags = deployer.getExistingTags();
     } catch (e) {
-      new import_obsidian3.Notice(`\u274C Error reading file: ${e.message}`);
+      new import_obsidian3.Notice(`\u274C \u8BFB\u53D6\u6587\u4EF6\u51FA\u9519\uFF1A${e.message}`);
       return;
     }
     if (!item) {
-      new import_obsidian3.Notice("\u274C Failed to prepare deploy item");
+      new import_obsidian3.Notice("\u274C \u51C6\u5907\u90E8\u7F72\u9879\u5931\u8D25");
       return;
     }
-    new DeployConfirmModal(this.app, item, (confirmedItem) => {
+    new DeployConfirmModal(this.app, item, existingTags, (confirmedItem) => {
       if (confirmedItem) {
         this.scheduler.add(confirmedItem);
       }
@@ -766,25 +840,33 @@ ${names}`, 8e3);
   }
 };
 var DeployConfirmModal = class extends import_obsidian3.Modal {
-  constructor(app, item, onSubmit) {
+  constructor(app, item, existingTags, onSubmit) {
     super(app);
     this.item = item;
+    this.existingTags = existingTags;
     this.onSubmit = onSubmit;
     this.titleInput = document.createElement("input");
     this.tagsInput = document.createElement("input");
     this.processImagesCheckbox = document.createElement("input");
+    this.destHint = document.createElement("p");
+  }
+  updateDestHint() {
+    const tags = this.tagsInput.value.trim() || this.item.tags;
+    const subfolder = tags.split(",")[0]?.trim() || "\u672A\u5206\u7C7B";
+    const sanitized = subfolder.replace(/[\\/:*?"<>|]/g, "_").trim() || "\u672A\u5206\u7C7B";
+    this.destHint.setText(`\u76EE\u6807\u4F4D\u7F6E\uFF1Asource/_posts/${sanitized}/${this.item.fileName}`);
   }
   onOpen() {
     const { contentEl } = this;
     contentEl.empty();
     contentEl.addClass("blog-deploy-modal");
-    contentEl.createEl("h2", { text: "\u{1F4E4} Deploy to Blog" });
+    contentEl.createEl("h2", { text: "\u{1F4E4} \u90E8\u7F72\u5230\u535A\u5BA2" });
     contentEl.createEl("p", {
-      text: `File: ${this.item.fileName}`,
+      text: `\u6587\u4EF6\uFF1A${this.item.fileName}`,
       cls: "blog-deploy-file"
     });
     const titleSetting = contentEl.createDiv();
-    titleSetting.createEl("label", { text: "Title" });
+    titleSetting.createEl("label", { text: "\u6807\u9898" });
     this.titleInput = titleSetting.createEl("input", {
       type: "text",
       value: this.item.title
@@ -792,14 +874,60 @@ var DeployConfirmModal = class extends import_obsidian3.Modal {
     this.titleInput.style.width = "100%";
     this.titleInput.style.marginBottom = "12px";
     const tagsSetting = contentEl.createDiv();
-    tagsSetting.createEl("label", { text: "Tags (comma-separated)" });
+    tagsSetting.createEl("label", { text: "\u6807\u7B7E\uFF08\u9017\u53F7\u5206\u9694\uFF09" });
     this.tagsInput = tagsSetting.createEl("input", {
       type: "text",
       value: this.item.tags,
-      placeholder: "e.g. Java, \u7B14\u8BB0"
+      placeholder: "\u4F8B\u5982\uFF1AJava, \u7B14\u8BB0"
     });
     this.tagsInput.style.width = "100%";
-    this.tagsInput.style.marginBottom = "12px";
+    this.tagsInput.style.marginBottom = "6px";
+    this.tagsInput.oninput = () => this.updateDestHint();
+    if (this.existingTags.length > 0) {
+      const chipRow = tagsSetting.createDiv();
+      chipRow.style.display = "flex";
+      chipRow.style.flexWrap = "wrap";
+      chipRow.style.gap = "4px";
+      chipRow.style.marginBottom = "12px";
+      chipRow.createEl("span", {
+        text: "\u5DF2\u6709\u6807\u7B7E\uFF1A",
+        cls: "blog-deploy-chip-label"
+      });
+      for (const tag of this.existingTags) {
+        const chip = chipRow.createEl("span", {
+          text: tag,
+          cls: "blog-deploy-tag-chip"
+        });
+        chip.style.cssText = `
+          display: inline-block;
+          padding: 2px 8px;
+          background: var(--interactive-normal);
+          border-radius: 10px;
+          font-size: 12px;
+          cursor: pointer;
+          user-select: none;
+        `;
+        chip.onmouseenter = () => {
+          chip.style.background = "var(--interactive-accent)";
+          chip.style.color = "var(--text-on-accent)";
+        };
+        chip.onmouseleave = () => {
+          chip.style.background = "var(--interactive-normal)";
+          chip.style.color = "";
+        };
+        chip.onclick = () => {
+          const currentTags = this.tagsInput.value.split(",").map((t) => t.trim()).filter(Boolean);
+          const idx = currentTags.indexOf(tag);
+          if (idx >= 0) {
+            currentTags.splice(idx, 1);
+          } else {
+            currentTags.push(tag);
+          }
+          this.tagsInput.value = currentTags.join(", ");
+          this.updateDestHint();
+        };
+      }
+    }
     const imageSetting = contentEl.createDiv();
     imageSetting.style.display = "flex";
     imageSetting.style.alignItems = "center";
@@ -811,28 +939,28 @@ var DeployConfirmModal = class extends import_obsidian3.Modal {
     this.processImagesCheckbox.checked = true;
     this.processImagesCheckbox.id = "blog-deploy-process-images";
     imageSetting.createEl("label", {
-      text: "\u{1F5BC}\uFE0F Upload local images to CDN (PicGo)",
+      text: "\u{1F5BC}\uFE0F \u4E0A\u4F20\u672C\u5730\u56FE\u7247\u5230\u56FE\u5E8A (PicGo)",
       cls: "blog-deploy-checkbox-label"
     });
     const label = imageSetting.querySelector("label");
     if (label)
       label.setAttribute("for", "blog-deploy-process-images");
-    contentEl.createEl("p", {
-      text: `Destination: ${this.item.destPath}`,
+    this.destHint = contentEl.createEl("p", {
       cls: "blog-deploy-path"
     });
+    this.updateDestHint();
     const buttonRow = contentEl.createDiv();
     buttonRow.style.display = "flex";
     buttonRow.style.justifyContent = "flex-end";
     buttonRow.style.gap = "8px";
     buttonRow.style.marginTop = "16px";
-    const cancelBtn = buttonRow.createEl("button", { text: "Cancel" });
+    const cancelBtn = buttonRow.createEl("button", { text: "\u53D6\u6D88" });
     cancelBtn.onclick = () => {
       this.onSubmit(null);
       this.close();
     };
     const deployBtn = buttonRow.createEl("button", {
-      text: "\u2705 Add to queue",
+      text: "\u2705 \u52A0\u5165\u961F\u5217",
       cls: "mod-cta"
     });
     deployBtn.onclick = () => {

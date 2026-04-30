@@ -29,6 +29,30 @@ export interface DeployResult {
   imageErrors: string[];
 }
 
+function sanitizeFolderName(name: string): string {
+  return name.replace(/[\\/:*?"<>|]/g, "_").trim();
+}
+
+function computeSubfolder(tags: string): string {
+  const firstTag = tags.split(",")[0]?.trim();
+  if (!firstTag) return "未分类";
+  const sanitized = sanitizeFolderName(firstTag);
+  return sanitized || "未分类";
+}
+
+function collectTagsFromFile(filePath: string): string[] {
+  try {
+    const content = fs.readFileSync(filePath, "utf-8");
+    const { frontmatter } = parseFrontmatter(content);
+    if (frontmatter?.tags) {
+      return frontmatter.tags.toString().split(",").map((t: string) => t.trim()).filter(Boolean);
+    }
+  } catch {
+    // skip unreadable files
+  }
+  return [];
+}
+
 export class Deployer {
   private blogPath: string;
   private postsSubdir: string;
@@ -62,6 +86,30 @@ export class Deployer {
     return path.join(this.blogPath, this.postsSubdir);
   }
 
+  getExistingTags(): string[] {
+    const tagSet = new Set<string>();
+    try {
+      const walkDir = (dir: string) => {
+        const entries = fs.readdirSync(dir, { withFileTypes: true });
+        for (const entry of entries) {
+          const fullPath = path.join(dir, entry.name);
+          if (entry.isDirectory()) {
+            walkDir(fullPath);
+          } else if (entry.isFile() && entry.name.endsWith(".md")) {
+            const tags = collectTagsFromFile(fullPath);
+            for (const t of tags) {
+              tagSet.add(t);
+            }
+          }
+        }
+      };
+      walkDir(this.postsPath);
+    } catch {
+      // ignore
+    }
+    return [...tagSet].sort();
+  }
+
   initGit(): GitOperator {
     this.git = new GitOperator(this.blogPath);
     return this.git;
@@ -80,7 +128,6 @@ export class Deployer {
     const absSourcePath = path.join(this.vaultRoot, relativePath);
     const content = this.readFile(absSourcePath);
     const fileName = path.basename(relativePath);
-    const destPath = path.join(this.postsPath, fileName);
 
     const { frontmatter } = parseFrontmatter(content);
     const title =
@@ -94,6 +141,9 @@ export class Deployer {
       const tagSet = new Set([...tags.split(",").map((t) => t.trim()), ...autoTags.split(",").map((t) => t.trim())]);
       tags = [...tagSet].filter(Boolean).join(", ");
     }
+
+    const subfolder = computeSubfolder(tags);
+    const destPath = path.join(this.postsPath, subfolder, fileName);
 
     return { sourcePath: absSourcePath, destPath, title, tags, fileName, processImages: true };
   }
@@ -124,6 +174,11 @@ export class Deployer {
     const fmStr = generateFrontmatterString(fm);
     const newContent = fmStr + processedBody;
 
+    const destDir = path.dirname(item.destPath);
+    if (!fs.existsSync(destDir)) {
+      fs.mkdirSync(destDir, { recursive: true });
+    }
+
     fs.writeFileSync(item.destPath, newContent, "utf-8");
     return { dest: item.destPath, imagesUploaded, imagesFailed, imageErrors };
   }
@@ -132,11 +187,11 @@ export class Deployer {
     const git = this.initGit();
 
     if (!git.isRepo()) {
-      return { success: false, message: "Blog path is not a git repository", count: 0, imagesUploaded: 0, imagesFailed: 0, imageErrors: [] };
+      return { success: false, message: "博客路径不是一个 Git 仓库", count: 0, imagesUploaded: 0, imagesFailed: 0, imageErrors: [] };
     }
 
     if (!fs.existsSync(this.postsPath)) {
-      return { success: false, message: `Posts directory not found: ${this.postsPath}`, count: 0, imagesUploaded: 0, imagesFailed: 0, imageErrors: [] };
+      return { success: false, message: `文章目录不存在：${this.postsPath}`, count: 0, imagesUploaded: 0, imagesFailed: 0, imageErrors: [] };
     }
 
     const deployed: string[] = [];
@@ -152,27 +207,27 @@ export class Deployer {
         totalFailed += imagesFailed;
         allErrors.push(...imageErrors);
       } catch (e: any) {
-        return { success: false, message: `Failed to write ${item.fileName}: ${e.message}`, count: deployed.length, imagesUploaded: totalUploaded, imagesFailed: totalFailed, imageErrors: allErrors };
+        return { success: false, message: `写入 ${item.fileName} 失败：${e.message}`, count: deployed.length, imagesUploaded: totalUploaded, imagesFailed: totalFailed, imageErrors: allErrors };
       }
     }
 
     if (deployed.length === 0) {
-      return { success: false, message: "No files deployed", count: 0, imagesUploaded: 0, imagesFailed: 0, imageErrors: [] };
+      return { success: false, message: "没有文件被部署", count: 0, imagesUploaded: 0, imagesFailed: 0, imageErrors: [] };
     }
 
-    let msg = `Deployed ${deployed.length} note(s)`;
+    let msg = `成功部署 ${deployed.length} 篇笔记`;
     if (totalUploaded > 0) {
-      msg += ` | 🖼️ ${totalUploaded} image(s) uploaded`;
+      msg += ` | 🖼️ ${totalUploaded} 张图片已上传`;
     }
     if (totalFailed > 0) {
-      msg += ` | ⚠️ ${totalFailed} failed`;
+      msg += ` | ⚠️ ${totalFailed} 张失败`;
     }
 
     if (pushToGit) {
       const relativePaths = deployed.map((d) => path.relative(this.blogPath, d));
       const added = git.add(relativePaths);
       if (!added) {
-        return { success: false, message: "git add failed", count: deployed.length, imagesUploaded: totalUploaded, imagesFailed: totalFailed, imageErrors: allErrors };
+        return { success: false, message: "git add 失败", count: deployed.length, imagesUploaded: totalUploaded, imagesFailed: totalFailed, imageErrors: allErrors };
       }
 
       const title = items.map((i) => i.title).join(", ");
@@ -183,7 +238,7 @@ export class Deployer {
       if (!pushResult.success) {
         return {
           success: false,
-          message: `${msg} but git push failed: ${pushResult.message}`,
+          message: `${msg}，但 git push 失败：${pushResult.message}`,
           count: deployed.length,
           imagesUploaded: totalUploaded,
           imagesFailed: totalFailed,
@@ -191,7 +246,7 @@ export class Deployer {
         };
       }
 
-      msg += " and pushed to GitHub";
+      msg += "，已推送至 GitHub";
     }
 
     return { success: true, message: msg, count: deployed.length, imagesUploaded: totalUploaded, imagesFailed: totalFailed, imageErrors: allErrors };

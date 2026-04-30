@@ -17,11 +17,11 @@ export class Scheduler {
   add(item: DeployItem): void {
     const exists = this.queue.some((q) => q.sourcePath === item.sourcePath);
     if (exists) {
-      new Notice(`"${item.title}" is already in the deploy queue`);
+      new Notice(`"${item.title}" 已在部署队列中`);
       return;
     }
     this.queue.push(item);
-    new Notice(`"${item.title}" added to deploy queue (${this.queue.length} pending)`);
+    new Notice(`"${item.title}" 已加入队列（共 ${this.queue.length} 篇待处理）`);
 
     this.resetTimer();
   }
@@ -68,7 +68,7 @@ export class Scheduler {
     this.queue = [];
     this.clearTimer();
     this.updateStatusBar();
-    new Notice("Deploy queue cleared");
+    new Notice("部署队列已清空");
   }
 
   private clearTimer(): void {
@@ -90,16 +90,45 @@ export class Scheduler {
     if (!this.statusBarItem) {
       this.statusBarItem = this.plugin.addStatusBarItem();
       this.statusBarItem.addClass("blog-deploy-status");
+      this.statusBarItem.style.cursor = "default";
     }
 
     if (this.queue.length === 0) {
       this.statusBarItem.setText("");
       this.statusBarItem.style.display = "none";
     } else {
+      this.statusBarItem.empty();
+
       const mins = Math.floor(this.remainingSeconds / 60);
       const secs = this.remainingSeconds % 60;
       const timeStr = `${mins}:${String(secs).padStart(2, "0")}`;
-      this.statusBarItem.setText(`⏳ ${this.queue.length} note(s) pending | Deploy in ${timeStr}`);
+
+      const label = this.statusBarItem.createSpan({
+        text: `⏳ ${this.queue.length} 篇待部署 | 剩余 ${timeStr}`,
+      });
+
+      const forceBtn = this.statusBarItem.createEl("a", {
+        text: "立即推送",
+        cls: "blog-deploy-status-btn",
+      });
+      forceBtn.style.cssText = "margin-left:8px;cursor:pointer;color:var(--text-accent);";
+      forceBtn.onclick = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        this.forceDeploy();
+      };
+
+      const cancelBtn = this.statusBarItem.createEl("a", {
+        text: "取消全部",
+        cls: "blog-deploy-status-btn",
+      });
+      cancelBtn.style.cssText = "margin-left:4px;cursor:pointer;color:var(--text-error);";
+      cancelBtn.onclick = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        this.clearQueue();
+      };
+
       this.statusBarItem.style.display = "";
     }
   }
@@ -112,7 +141,7 @@ export class Scheduler {
     this.clearTimer();
     this.updateStatusBar();
 
-    new Notice(`Deploying ${items.length} note(s) to blog...`);
+    new Notice(`正在部署 ${items.length} 篇笔记到博客...`);
 
     const vaultRoot = (this.plugin.app.vault.adapter as any).getBasePath?.() ?? "";
 
@@ -136,8 +165,8 @@ export class Scheduler {
 
     if (result.imageErrors.length > 0) {
       const errSummary = result.imageErrors.slice(0, 3).join("; ");
-      const more = result.imageErrors.length > 3 ? ` (+${result.imageErrors.length - 3} more)` : "";
-      new Notice(`⚠️ Image issues: ${errSummary}${more}`, 8000);
+      const more = result.imageErrors.length > 3 ? `（还有 ${result.imageErrors.length - 3} 个错误）` : "";
+      new Notice(`⚠️ 图片问题：${errSummary}${more}`, 8000);
     }
   }
 }
